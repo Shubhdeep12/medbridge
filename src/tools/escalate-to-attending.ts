@@ -134,7 +134,7 @@ export async function escalateToAttending(
     );
     
     if (fhirResult.status === 'FAILED') {
-      throw new Error('Failed to create FHIR CommunicationRequest');
+      throw new Error(`Failed to create FHIR CommunicationRequest: ${fhirResult.errorMessage || 'Unknown error'}`);
     }
     
     return {
@@ -189,7 +189,7 @@ async function createFHIRCommunicationRequest(
   level: string,
   message: string,
   reasonCode?: string
-): Promise<{ status: 'SENT' | 'FAILED'; resourceId?: string }> {
+): Promise<{ status: 'SENT' | 'FAILED'; resourceId?: string; errorMessage?: string }> {
   
   // Map escalation level to FHIR priority
   const priorityMap: Record<string, string> = {
@@ -274,9 +274,11 @@ async function createFHIRCommunicationRequest(
     };
     
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[ESCALATION] FHIR CommunicationRequest creation failed:', error);
     return {
-      status: 'FAILED'
+      status: 'FAILED',
+      errorMessage
     };
   }
 }
