@@ -12,6 +12,60 @@ import { getRecentNurseNotes } from './tools/get-nurse-notes.js';
 import { generateHandoverSummary } from './tools/handover-summary.js';
 import { escalateToAttending } from './tools/escalate-to-attending.js';
 
+// A2A Agent Card
+const agentCard = {
+  "name": "medbridge-handover-agent",
+  "description": "Clinical handover specialist agent for nursing shift transitions with risk detection and escalation capabilities",
+  "version": "1.0.0",
+  "capabilities": [
+    {
+      "name": "prepare_handover",
+      "description": "Gathers patient data and prepares comprehensive handover summary",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patientId": { "type": "string", "description": "Patient identifier" },
+          "shiftType": { "type": "string", "enum": ["day_to_night", "night_to_day", "weekday_to_weekend"] }
+        },
+        "required": ["patientId"]
+      }
+    },
+    {
+      "name": "detect_risks",
+      "description": "Analyzes patient data for critical trends and escalation triggers",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patientId": { "type": "string", "description": "Patient identifier" },
+          "alertThreshold": { "type": "string", "enum": ["low", "medium", "high"], "default": "medium" }
+        },
+        "required": ["patientId"]
+      }
+    },
+    {
+      "name": "escalate_critical",
+      "description": "Escalates critical findings to attending physician",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patientId": { "type": "string", "description": "Patient identifier" },
+          "level": { "type": "string", "enum": ["LOW", "MODERATE", "HIGH", "CRITICAL"] },
+          "reason": { "type": "string", "description": "Detailed escalation reason" }
+        },
+        "required": ["patientId", "level", "reason"]
+      }
+    }
+  ],
+  "endpoint": "https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp",
+  "authentication": { "type": "apiKey", "headerName": "X-API-Key" },
+  "skills": ["clinical-handover", "risk-assessment", "vital-signs-analysis", "escalation-management"],
+  "supportedContexts": ["patient", "encounter", "shift"],
+  "fhirCapabilities": {
+    "resources": ["Patient", "Observation", "DocumentReference", "CommunicationRequest"],
+    "operations": ["read", "search"]
+  }
+};
+
 // Tool handlers
 const toolHandlers: Record<string, (args: Record<string, unknown>, context: SHARPContext | null, env: Record<string, string>) => Promise<unknown>> = {
   'get_patient_vitals': async (args, context, env) => getPatientVitals(
@@ -80,6 +134,16 @@ export default {
     // MCP JSON-RPC endpoint
     if (path === '/mcp' && request.method === 'POST') {
       return handleMCPRequest(request, env);
+    }
+
+    // A2A Agent Card (well-known endpoint)
+    if (path === '/.well-known/agent.json' && request.method === 'GET') {
+      return new Response(JSON.stringify(agentCard), {
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
     }
 
     // 404
