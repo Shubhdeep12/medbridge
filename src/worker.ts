@@ -209,7 +209,7 @@ async function handleToolsCall(
   params: { name: string; arguments: Record<string, unknown> },
   context: SHARPContext | null,
   env: Record<string, string>
-): Promise<{ content: Array<{ type: string; content: unknown }>; isError: boolean }> {
+): Promise<{ content: Array<{ type: 'text'; text: string }>; isError: boolean }> {
   const { name, arguments: args } = params;
 
   const handler = toolHandlers[name];
@@ -228,7 +228,7 @@ async function handleToolsCall(
   const result = await handler(args, context, env);
 
   return {
-    content: [{ type: 'structured', content: result }],
+    content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
     isError: false
   };
 }
