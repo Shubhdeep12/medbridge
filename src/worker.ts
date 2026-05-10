@@ -235,13 +235,30 @@ async function handleToolsCall(
 
 function handleInitialize(): {
   protocolVersion: string;
-  capabilities: { tools: { listChanged: boolean } };
+  capabilities: {
+    tools: { listChanged: boolean };
+    extensions?: {
+      'ai.promptopinion/fhir-context'?: {
+        scopes: Array<{ name: string; required?: boolean }>;
+      };
+    };
+  };
   serverInfo: { name: string; version: string };
 } {
   return {
     protocolVersion: '2024-11-05',
     capabilities: {
-      tools: { listChanged: false }
+      tools: { listChanged: false },
+      extensions: {
+        'ai.promptopinion/fhir-context': {
+          scopes: [
+            { name: 'patient/Patient.rs', required: true },
+            { name: 'patient/Observation.rs', required: true },
+            { name: 'patient/DocumentReference.rs', required: false },
+            { name: 'patient/CommunicationRequest.rs', required: false }
+          ]
+        }
+      }
     },
     serverInfo: {
       name: 'medbridge',
