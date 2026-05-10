@@ -1,0 +1,13 @@
+# Cloudflare Workers Configuration
+# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "medbridge-mcp"
+main = "src/worker.ts"
+compatibility_date = "2024-05-10"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NODE_ENV = "production"
+
+# Secrets (set via wrangler secret put):
+# DEMO_MODE = "false"

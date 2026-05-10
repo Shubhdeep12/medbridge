@@ -1,0 +1,115 @@
+{
+  "name": "medbridge-handover-agent",
+  "description": "Clinical handover specialist agent for nursing shift transitions with risk detection and escalation capabilities",
+  "version": "1.0.0",
+  "capabilities": [
+    {
+      "name": "prepare_handover",
+      "description": "Gathers patient data and prepares comprehensive handover summary",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string",
+            "description": "Patient identifier"
+          },
+          "shiftType": {
+            "type": "string",
+            "enum": ["day_to_night", "night_to_day", "weekday_to_weekend"],
+            "description": "Type of shift transition"
+          }
+        },
+        "required": ["patientId"]
+      }
+    },
+    {
+      "name": "detect_risks",
+      "description": "Analyzes patient data for critical trends and escalation triggers",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string",
+            "description": "Patient identifier"
+          },
+          "alertThreshold": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "default": "medium"
+          }
+        },
+        "required": ["patientId"]
+      }
+    },
+    {
+      "name": "escalate_critical",
+      "description": "Escalates critical findings to attending physician",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string",
+            "description": "Patient identifier"
+          },
+          "level": {
+            "type": "string",
+            "enum": ["LOW", "MODERATE", "HIGH", "CRITICAL"]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Detailed escalation reason"
+          }
+        },
+        "required": ["patientId", "level", "reason"]
+      }
+    },
+    {
+      "name": "receive_handover",
+      "description": "Incoming nurse receives and acknowledges handover",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string",
+            "description": "Patient identifier"
+          },
+          "incomingNurse": {
+            "type": "string",
+            "description": "Name/ID of incoming nurse"
+          }
+        },
+        "required": ["patientId", "incomingNurse"]
+      }
+    }
+  ],
+  "endpoint": "https://api.medbridge.health/a2a/webhook",
+  "authentication": {
+    "type": "apiKey",
+    "headerName": "X-API-Key"
+  },
+  "skills": [
+    "clinical-handover",
+    "risk-assessment",
+    "vital-signs-analysis",
+    "nursing-documentation",
+    "escalation-management"
+  ],
+  "supportedContexts": [
+    "patient",
+    "encounter",
+    "shift"
+  ],
+  "fhirCapabilities": {
+    "resources": [
+      "Patient",
+      "Observation",
+      "DocumentReference",
+      "CommunicationRequest",
+      "Task"
+    ],
+    "operations": [
+      "read",
+      "search"
+    ]
+  }
+}

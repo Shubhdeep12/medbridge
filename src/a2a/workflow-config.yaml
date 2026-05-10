@@ -1,0 +1,181 @@
+# MedBridge A2A Agent Workflow Configuration
+# Defines the handover workflow orchestration
+
+agent:
+  name: medbridge-handover-agent
+  displayName: MedBridge Handover Agent
+  description: AI-powered clinical handover assistant for nursing shift transitions
+  
+workflows:
+  # Primary workflow: Nursing Shift Handover
+  shift_handover:
+    name: Shift Handover Protocol
+    description: Complete handover workflow from outgoing to incoming nurse
+    
+    triggers:
+      - type: scheduled
+        cron: "0 */8 * * *"  # Every 8 hours (shift change)
+      - type: manual
+        button: "Start Handover"
+      - type: event
+        event: "shift.change.requested"
+    
+    steps:
+      - id: 1
+        name: Gather Patient Context
+        action: prepare_handover
+        description: Collect patient data via MCP tools
+        tools:
+          - get_patient_vitals
+          - get_recent_nurse_notes
+        output: raw_patient_data
+        
+      - id: 2
+        name: Risk Assessment
+        action: detect_risks
+        description: Analyze data for critical trends
+        dependsOn: [1]
+        input: raw_patient_data
+        output: risk_assessment
+        
+      - id: 3
+        name: Generate Handover Summary
+        action: generate_summary
+        description: Create comprehensive handover document
+        dependsOn: [1, 2]
+        tools:
+          - handover_summary
+        input: 
+          patientData: raw_patient_data
+          riskData: risk_assessment
+        output: handover_document
+        
+      - id: 4
+        name: Critical Decision
+        action: conditional_branch
+        description: Check if escalation is needed
+        dependsOn: [2]
+        condition: "risk_assessment.overallRisk IN ['HIGH', 'CRITICAL']"
+        branches:
+          true:
+            - id: 4a
+              name: Escalate to Attending
+              action: escalate_critical
+              tools:
+                - escalate_to_attending
+              urgency: high
+          false:
+            - id: 4b
+              name: Proceed to Handover
+              action: continue
+              
+      - id: 5
+        name: Deliver Handover
+        action: receive_handover
+        description: Present summary to incoming nurse
+        dependsOn: [3, 4]
+        output: handover_complete
+        
+      - id: 6
+        name: Documentation
+        action: create_task
+        description: Create follow-up tasks in EHR
+        dependsOn: [5]
+        optional: true
+
+  # Secondary workflow: Continuous Risk Monitoring
+  risk_monitoring:
+    name: Continuous Risk Monitor
+    description: Background monitoring for concerning changes
+    
+    triggers:
+      - type: scheduled
+        cron: "*/30 * * * *"  # Every 30 minutes
+        
+    steps:
+      - id: 1
+        name: Check All Patients
+        action: batch_process
+        description: Monitor all active patients
+        
+      - id: 2
+        name: Detect Anomalies
+        action: detect_risks
+        description: Analyze for critical changes
+        
+      - id: 3
+        name: Alert if Needed
+        action: conditional_branch
+        condition: "anomalies_found > 0"
+        branches:
+          true:
+            - name: Send Alerts
+              action: notify
+              channels: ["in_app", "email"]
+
+# COIN (Conversational Interoperability) Configuration
+coin:
+  version: "1.0"
+  messageFormats:
+    - type: handover_request
+      schema: handover_request_schema.json
+    - type: handover_response
+      schema: handover_response_schema.json
+    - type: escalation_alert
+      schema: escalation_schema.json
+  
+  conversationPatterns:
+    - name: nurse_to_nurse_handover
+      roles: [outgoing_nurse, incoming_nurse, handover_agent]
+      flow: sequential
+      
+    - name: nurse_to_physician_escalation
+      roles: [nurse, physician, handover_agent]
+      flow: priority
+
+# Integration Points
+integrations:
+  mcp:
+    serverEndpoint: http://localhost:3000/mcp
+    tools:
+      - get_patient_vitals
+      - get_recent_nurse_notes
+      - handover_summary
+      - escalate_to_attending
+      
+  fhir:
+    version: R4
+    authType: SMART-on-FHIR
+    requiredScopes:
+      - patient/Patient.read
+      - patient/Observation.read
+      - patient/DocumentReference.read
+      - patient/CommunicationRequest.write
+      
+  notification:
+    channels:
+      - type: in_app
+        enabled: true
+      - type: email
+        enabled: true
+        template: escalation_email_template
+      - type: sms
+        enabled: false
+        
+# Security & Compliance
+security:
+  phiHandling:
+    storage: encrypted_at_rest
+    transmission: tls_1_3
+    auditLog: true
+    
+  accessControl:
+    requireAuthentication: true
+    allowedRoles:
+      - registered_nurse
+      - licensed_practitioner
+      - attending_physician
+      
+  dataRetention:
+    handoverRecords: 90_days
+    auditLogs: 7_years
