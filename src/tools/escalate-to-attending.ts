@@ -82,11 +82,6 @@ export async function escalateToAttending(
   const validated = inputSchema.parse(input);
   
   // Verify patient exists in FHIR server
-  const record = await fetchPatientRecord(validated.patientId, context, env);
-  if (!record) {
-    throw new Error(`Patient not found: ${validated.patientId}`);
-  }
-  
   // Generate escalation ID
   const escalationId = generateEscalationId();
   const timestamp = new Date().toISOString();
@@ -96,6 +91,10 @@ export async function escalateToAttending(
   
   // In DEMO_MODE: Just log and return (no actual FHIR write)
   if (env?.DEMO_MODE === 'true' || !context) {
+    const patientSummary = getPatientSummary(validated.patientId);
+    if (!patientSummary) {
+      throw new Error(`Patient not found: ${validated.patientId}`);
+    }
     const escalationLog = {
       id: escalationId,
       patientId: validated.patientId,
@@ -119,6 +118,12 @@ export async function escalateToAttending(
   
   // Production: Create actual FHIR CommunicationRequest
   try {
+    // Fetch patient record for production
+    const record = await fetchPatientRecord(validated.patientId, context, env);
+    if (!record) {
+      throw new Error(`Patient not found: ${validated.patientId}`);
+    }
+    
     const fhirResult = await createFHIRCommunicationRequest(
       context,
       validated.patientId,
