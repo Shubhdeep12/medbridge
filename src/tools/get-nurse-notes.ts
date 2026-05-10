@@ -83,13 +83,14 @@ const inputSchema = z.object({
 
 export async function getRecentNurseNotes(
   input: GetRecentNurseNotesInput,
-  context?: SHARPContext | null
+  context?: SHARPContext | null,
+  env?: { DEMO_MODE?: string }
 ): Promise<GetRecentNurseNotesOutput> {
   // Validate input
   const validated = inputSchema.parse(input);
   
   // Retrieve patient record from FHIR server
-  const record = await fetchPatientRecord(validated.patientId, context);
+  const record = await fetchPatientRecord(validated.patientId, context, env);
   
   if (!record) {
     throw new Error(`Patient not found: ${validated.patientId}`);

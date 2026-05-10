@@ -13,22 +13,26 @@ import { generateHandoverSummary } from './tools/handover-summary.js';
 import { escalateToAttending } from './tools/escalate-to-attending.js';
 
 // Tool handlers
-const toolHandlers: Record<string, (args: Record<string, unknown>, context: SHARPContext | null) => Promise<unknown>> = {
-  'get_patient_vitals': async (args, context) => getPatientVitals(
+const toolHandlers: Record<string, (args: Record<string, unknown>, context: SHARPContext | null, env: Record<string, string>) => Promise<unknown>> = {
+  'get_patient_vitals': async (args, context, env) => getPatientVitals(
     args as { patientId: string; sinceHours?: number },
-    context
+    context,
+    env
   ),
-  'get_recent_nurse_notes': async (args, context) => getRecentNurseNotes(
+  'get_recent_nurse_notes': async (args, context, env) => getRecentNurseNotes(
     args as { patientId: string; since?: string; limit?: number },
-    context
+    context,
+    env
   ),
-  'handover_summary': async (args, context) => generateHandoverSummary(
+  'handover_summary': async (args, context, env) => generateHandoverSummary(
     args as { patientId: string; includeRecommendations?: boolean },
-    context
+    context,
+    env
   ),
-  'escalate_to_attending': async (args, context) => escalateToAttending(
+  'escalate_to_attending': async (args, context, env) => escalateToAttending(
     args as { patientId: string; level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'; message: string; reasonCode?: string },
-    context
+    context,
+    env
   )
 };
 
@@ -111,7 +115,8 @@ async function handleMCPRequest(request: Request, env: Record<string, string>): 
       case 'tools/call':
         result = await handleToolsCall(
           body.params as { name: string; arguments: Record<string, unknown> },
-          sharpContext
+          sharpContext,
+          env
         );
         break;
 
@@ -198,7 +203,8 @@ function handleToolsList(): { tools: unknown[] } {
 
 async function handleToolsCall(
   params: { name: string; arguments: Record<string, unknown> },
-  context: SHARPContext | null
+  context: SHARPContext | null,
+  env: Record<string, string>
 ): Promise<{ content: Array<{ type: string; content: unknown }>; isError: boolean }> {
   const { name, arguments: args } = params;
 
@@ -215,7 +221,7 @@ async function handleToolsCall(
     }
   }
 
-  const result = await handler(args, context);
+  const result = await handler(args, context, env);
 
   return {
     content: [{ type: 'structured', content: result }],

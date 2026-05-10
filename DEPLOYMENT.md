@@ -27,7 +27,7 @@ MedBridge is deployed as an **MCP Server on Cloudflare Workers** (free tier). Th
 │    ├── handover_summary                                     │
 │    └── escalate_to_attending                               │
 │                                                             │
-│  URL: https://medbridge-mcp.your-account.workers.dev       │
+│  URL: https://medbridge-mcp.chhabrashubhdeep.workers.dev   │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -36,7 +36,7 @@ MedBridge is deployed as an **MCP Server on Cloudflare Workers** (free tier). Th
 ### ✅ MCP Server (Cloudflare Workers)
 Deployed to Cloudflare's edge network (200+ locations worldwide)
 - **4 Tools**: get_patient_vitals, get_recent_nurse_notes, handover_summary, escalate_to_attending
-- **Endpoint**: `https://medbridge-mcp.your-account.workers.dev/mcp`
+- **Endpoint**: `https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp`
 - **Protocol**: MCP JSON-RPC over HTTP
 - **Cost**: FREE (100,000 requests/day)
 
@@ -75,14 +75,14 @@ wrangler deploy
 # ⛅️ wrangler 3.x
 # ✨ Successfully created script
 # ✨ Successfully published your script
-# https://medbridge-mcp.your-account.workers.dev
+# https://medbridge-mcp.chhabrashubhdeep.workers.dev
 ```
 
 ### Step 3: Get Your Endpoint
 
 After deployment, you'll get a URL:
 ```
-https://medbridge-mcp.your-account.workers.dev/mcp
+https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp
 ```
 
 ### Step 4: Configure in PromptOpinion
@@ -92,7 +92,7 @@ Go to **PromptOpinion App → Settings → MCP Servers → Add Custom MCP Server
 | Field | Value | Example |
 |-------|-------|---------|
 | **Friendly Name** | `MedBridge Handover` | Any display name |
-| **Endpoint** | Your Workers URL + `/mcp` | `https://medbridge-mcp.your-account.workers.dev/mcp` |
+| **Endpoint** | Your Workers URL + `/mcp` | `https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp` |
 | **Transport Type** | `HTTP` | JSON-RPC over HTTP |
 | **Authentication Type** | `API Key` | X-API-Key header |
 | **API Key Header Name** | `X-API-Key` | Standard SHARP header |
@@ -227,7 +227,7 @@ Your MCP server (Cloudflare Worker) extracts these and queries the FHIR server d
 ┌─────────────────────────────────────────────────────────────┐
 │  CLOUDFLARE WORKERS (Your Deployment)                        │
 │                                                              │
-│  https://medbridge-mcp.your-account.workers.dev             │
+│  https://medbridge-mcp.chhabrashubhdeep.workers.dev         │
 │                                                              │
 │  POST /mcp ──┬──► tools/list                                │
 │              │                                              │
@@ -260,7 +260,7 @@ Your MCP server (Cloudflare Worker) extracts these and queries the FHIR server d
 ### MCP Server Not Connecting
 ```bash
 # Test your endpoint
-curl -X POST https://medbridge-mcp.your-account.workers.dev/mcp \
+curl -X POST https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'

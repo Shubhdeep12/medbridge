@@ -120,7 +120,7 @@ npm install -g wrangler
 wrangler login
 wrangler deploy
 
-# Get URL: https://medbridge-mcp.your-account.workers.dev
+# Get URL: https://medbridge-mcp.chhabrashubhdeep.workers.dev
 ```
 
 **Other Options**: See `DEPLOYMENT-CF.md` for detailed guides.

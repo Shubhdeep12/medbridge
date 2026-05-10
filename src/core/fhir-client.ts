@@ -17,23 +17,19 @@ import type {
 import { getPatientRecord as getDemoPatient } from '../data/patients.js';
 
 // ============================================================================
-// Configuration
-// ============================================================================
-
-// DEMO_MODE must be explicitly enabled - never falls back to synthetic data in production
-const DEMO_MODE = process.env.DEMO_MODE === 'true';
-
 // ============================================================================
 // Main FHIR Fetch Function
 // ============================================================================
 
 export async function fetchPatientRecord(
   patientId: string,
-  context?: SHARPContext | null
+  context?: SHARPContext | null,
+  env?: { DEMO_MODE?: string }
 ): Promise<PatientRecord | null> {
   
   // DEMO_MODE: Use synthetic data only when explicitly enabled
-  if (DEMO_MODE) {
+  const isDemoMode = env?.DEMO_MODE === 'true';
+  if (isDemoMode) {
     console.log(`[DEMO MODE] Using synthetic data for patient ${patientId}`);
     const demoRecord = getDemoPatient(patientId);
     return demoRecord || null;

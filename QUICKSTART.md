@@ -19,7 +19,7 @@ wrangler login
 wrangler deploy
 
 # 4. Get your Workers URL
-# Output: https://medbridge-mcp.your-account.workers.dev
+# Output: https://medbridge-mcp.chhabrashubhdeep.workers.dev
 ```
 
 ### Local Development (Express)
@@ -40,7 +40,7 @@ Go to: **Settings → MCP Servers → Add Custom MCP Server**
 | Field | Value |
 |-------|-------|
 | Friendly Name | `MedBridge Clinical Handover` |
-| Endpoint | `https://your-domain.com/mcp` |
+| Endpoint | `https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp` |
 | Transport Type | `HTTP` |
 | Authentication | `API Key` |
 | API Key Header | `X-API-Key` |
@@ -154,7 +154,7 @@ medbridge/
 **MCP server not connecting:**
 ```bash
 # Test your endpoint
-curl -X POST https://your-domain.com/mcp \
+curl -X POST https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
   -d '{"jsonrpc":"2.0","id":"1","method":"tools/list"}'

@@ -75,13 +75,14 @@ const inputSchema = z.object({
 
 export async function escalateToAttending(
   input: EscalateToAttendingInput,
-  context?: SHARPContext | null
+  context?: SHARPContext | null,
+  env?: { DEMO_MODE?: string }
 ): Promise<EscalateToAttendingOutput> {
   // Validate input
   const validated = inputSchema.parse(input);
   
   // Verify patient exists in FHIR server
-  const record = await fetchPatientRecord(validated.patientId, context);
+  const record = await fetchPatientRecord(validated.patientId, context, env);
   if (!record) {
     throw new Error(`Patient not found: ${validated.patientId}`);
   }
@@ -94,7 +95,7 @@ export async function escalateToAttending(
   const estimatedResponseTime = calculateResponseTime(validated.level);
   
   // In DEMO_MODE: Just log and return (no actual FHIR write)
-  if (process.env.DEMO_MODE === 'true' || !context) {
+  if (env?.DEMO_MODE === 'true' || !context) {
     const escalationLog = {
       id: escalationId,
       patientId: validated.patientId,

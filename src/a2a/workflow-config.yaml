@@ -136,7 +136,7 @@ coin:
 # Integration Points
 integrations:
   mcp:
-    serverEndpoint: http://localhost:3000/mcp
+    serverEndpoint: https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp
     tools:
       - get_patient_vitals
       - get_recent_nurse_notes

@@ -58,11 +58,11 @@
     "protocols": ["MCP", "A2A"],
     "standards": ["FHIR R4", "SMART-on-FHIR", "SHARP Context"],
     "runtime": "Node.js 20",
-    "deployment": ["Docker", "Kubernetes", "Cloud Run"],
+    "deployment": ["Cloudflare Workers", "Railway", "VPS"],
     "authentication": ["OAuth2", "API Key"]
   },
   "mcpConfiguration": {
-    "serverEndpoint": "/mcp",
+    "serverEndpoint": "https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp",
     "tools": [
       {
         "name": "get_patient_vitals",
@@ -143,8 +143,9 @@
     "thumbnail": "docs/demo-thumbnail.jpg"
   },
   "installation": {
-    "type": "docker",
-    "command": "docker run -p 3000:3000 medbridge/mcp-server:latest"
+    "type": "cloudflare-workers",
+    "command": "wrangler deploy",
+    "endpoint": "https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp"
   },
   "requirements": {
     "memory": "512MB",

@@ -72,13 +72,14 @@ const inputSchema = z.object({
 
 export async function generateHandoverSummary(
   input: HandoverSummaryInput,
-  context?: SHARPContext | null
+  context?: SHARPContext | null,
+  env?: { DEMO_MODE?: string }
 ): Promise<HandoverSummaryOutput> {
   // Validate input
   const validated = inputSchema.parse(input);
   
   // Retrieve patient record from FHIR server
-  const record = await fetchPatientRecord(validated.patientId, context);
+  const record = await fetchPatientRecord(validated.patientId, context, env);
   
   if (!record) {
     throw new Error(`Patient not found: ${validated.patientId}`);
