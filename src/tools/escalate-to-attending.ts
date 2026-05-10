@@ -256,7 +256,14 @@ async function createFHIRCommunicationRequest(
     });
     
     if (!response.ok) {
-      throw new Error(`FHIR error ${response.status}: ${response.statusText}`);
+      const errorBody = await response.text();
+      console.error('[ESCALATION] FHIR error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+        url: url
+      });
+      throw new Error(`FHIR error ${response.status}: ${response.statusText} - ${errorBody.substring(0, 200)}`);
     }
     
     const result = await response.json();
