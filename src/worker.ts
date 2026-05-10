@@ -225,7 +225,18 @@ async function handleToolsCall(
     }
   }
 
-  const result = await handler(args, context, env);
+  // Inject patientId from SHARP context if missing or null in args
+  const mergedArgs = { ...args };
+  if ((!mergedArgs.patientId || mergedArgs.patientId === null) && context?.patientId) {
+    mergedArgs.patientId = context.patientId;
+  }
+
+  // Validate patientId is present
+  if (!mergedArgs.patientId) {
+    throw new Error(`Missing required parameter: patientId (not in args or SHARP context)`);
+  }
+
+  const result = await handler(mergedArgs, context, env);
 
   return {
     content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
