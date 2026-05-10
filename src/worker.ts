@@ -124,6 +124,10 @@ async function handleMCPRequest(request: Request, env: Record<string, string>): 
         result = handleInitialize();
         break;
 
+      case 'notifications/initialized':
+        // Notification - no response needed, return empty success
+        return jsonResponse({ jsonrpc: '2.0', id: body.id, result: {} });
+
       default:
         return jsonResponse(createErrorResponse(body.id, -32601, `Method not found: ${body.method}`), 404);
     }
