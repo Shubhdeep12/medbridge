@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedBridge - Vital Trends Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 24px;
+    }
+    h1 {
+      color: #1a365d;
+      font-size: 24px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .control-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    select, button {
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    button:hover { background: #2563eb; }
+    .vital-toggles {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .vital-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .vital-toggle.active {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .vital-toggle.inactive {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    .vital-toggle .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .chart-container {
+      position: relative;
+      height: 400px;
+      margin-bottom: 24px;
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .chart-svg {
+      width: 100%;
+      height: 100%;
+    }
+    .grid-line {
+      stroke: #e2e8f0;
+      stroke-width: 1;
+    }
+    .axis-text {
+      fill: #64748b;
+      font-size: 11px;
+    }
+    .data-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    .data-point {
+      r: 4;
+      cursor: pointer;
+      transition: r 0.2s;
+    }
+    .data-point:hover { r: 6; }
+    .critical-point {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #475569;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .stat-card {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #3b82f6;
+    }
+    .stat-card.critical { border-left-color: #ef4444; }
+    .stat-card.warning { border-left-color: #f59e0b; }
+    .stat-label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 4px;
+    }
+    .stat-context {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .events-list {
+      margin-top: 24px;
+    }
+    .events-list h3 {
+      font-size: 16px;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-left: 3px solid #ef4444;
+      background: #fef2f2;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 8px;
+    }
+    .event-time {
+      font-size: 12px;
+      color: #64748b;
+      min-width: 80px;
+    }
+    .event-details {
+      flex: 1;
+    }
+    .event-vital {
+      font-weight: 500;
+      color: #991b1b;
+    }
+    .event-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #dc2626;
+    }
+    .ai-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      background: #7c3aed;
+    }
+    .ai-btn:hover { background: #6d28d9; }
+    .tooltip {
+      position: absolute;
+      background: #1e293b;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+      Vital Trends Dashboard
+    </h1>
+    <p class="subtitle">Interactive visualization with AI-powered analysis. Click data points to explore trends.</p>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>Time Range</label>
+        <select id="timeRange">
+          <option value="6h">Last 6 Hours</option>
+          <option value="12h">Last 12 Hours</option>
+          <option value="24h" selected>Last 24 Hours</option>
+          <option value="48h">Last 48 Hours</option>
+          <option value="7d">Last 7 Days</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Vital Signs</label>
+        <div class="vital-toggles">
+          <div class="vital-toggle active" data-vital="heartRate">
+            <span class="dot" style="background: #ef4444;"></span>
+            Heart Rate
+          </div>
+          <div class="vital-toggle active" data-vital="bloodPressure">
+            <span class="dot" style="background: #3b82f6;"></span>
+            Blood Pressure
+          </div>
+          <div class="vital-toggle active" data-vital="oxygenSaturation">
+            <span class="dot" style="background: #10b981;"></span>
+            O2 Saturation
+          </div>
+          <div class="vital-toggle inactive" data-vital="temperature">
+            <span class="dot" style="background: #f59e0b;"></span>
+            Temperature
+          </div>
+          <div class="vital-toggle inactive" data-vital="respiratoryRate">
+            <span class="dot" style="background: #8b5cf6;"></span>
+            Respiratory
+          </div>
+        </div>
+      </div>
+
+      <button id="refreshBtn">↻ Refresh Data</button>
+      <button class="ai-btn" id="analyzeBtn">✨ AI Analysis</button>
+    </div>
+
+    <div class="chart-container">
+      <svg class="chart-svg" id="chartSvg">
+        <!-- Chart will be rendered here -->
+      </svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="stats-grid" id="statsGrid">
+      <!-- Stats cards will be rendered here -->
+    </div>
+
+    <div class="events-list" id="eventsList" style="display: none;">
+      <h3>⚠️ Critical Events</h3>
+      <div id="eventsContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // MCP Apps Communication via postMessage
+    let mcpHost = null;
+    let toolInput = {};
+
+    // Initialize MCP communication
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (data.jsonrpc === '2.0') {
+        if (data.method === 'ui/notifications/tool-input') {
+          toolInput = data.params.arguments;
+          loadData();
+        } else if (data.method === 'ui/notifications/tool-result') {
+          renderChart(data.params.result);
+        }
+      }
+    });
+
+    // Initialize message to host
+    function initialize() {
+      window.parent.postMessage({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'ui/initialize',
+        params: {}
+      }, '*');
+    }
+
+    // Send message to AI for analysis
+    function sendToAI(message) {
+      window.parent.postMessage({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'ui/message',
+        params: {
+          role: 'user',
+          content: { type: 'text', text: message }
+        }
+      }, '*');
+    }
+
+    // Update model context
+    function updateContext(context) {
+      window.parent.postMessage({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'ui/update-model-context',
+        params: { structuredContent: context }
+      }, '*');
+    }
+
+    // Sample data for demo (would come from tool result)
+    const sampleData = {
+      patientName: 'John Smith',
+      timeRange: '24h',
+      vitals: [
+        { timestamp: '2026-01-26T08:00:00Z', heartRate: 72, systolicBP: 120, diastolicBP: 80, oxygenSaturation: 98, temperature: 36.6 },
+        { timestamp: '2026-01-26T12:00:00Z', heartRate: 85, systolicBP: 135, diastolicBP: 85, oxygenSaturation: 96, temperature: 37.2 },
+        { timestamp: '2026-01-26T16:00:00Z', heartRate: 95, systolicBP: 145, diastolicBP: 90, oxygenSaturation: 94, temperature: 37.8 },
+        { timestamp: '2026-01-26T20:00:00Z', heartRate: 110, systolicBP: 155, diastolicBP: 95, oxygenSaturation: 92, temperature: 38.2 },
+        { timestamp: '2026-01-26T22:00:00Z', heartRate: 125, systolicBP: 165, diastolicBP: 100, oxygenSaturation: 89, temperature: 38.5 }
+      ],
+      criticalEvents: [
+        { timestamp: '2026-01-26T20:00:00Z', vital: 'Heart Rate', value: 110, threshold: '> 120 bpm' },
+        { timestamp: '2026-01-26T22:00:00Z', vital: 'O2 Saturation', value: 89, threshold: '< 90%' }
+      ]
+    };
+
+    const vitalConfigs = {
+      heartRate: { color: '#ef4444', label: 'Heart Rate', min: 40, max: 160, unit: 'bpm' },
+      bloodPressure: { color: '#3b82f6', label: 'Blood Pressure', min: 60, max: 200, unit: 'mmHg' },
+      oxygenSaturation: { color: '#10b981', label: 'O2 Saturation', min: 85, max: 100, unit: '%' },
+      temperature: { color: '#f59e0b', label: 'Temperature', min: 35, max: 40, unit: '°C' },
+      respiratoryRate: { color: '#8b5cf6', label: 'Respiratory Rate', min: 8, max: 40, unit: '/min' }
+    };
+
+    let activeVitals = ['heartRate', 'bloodPressure', 'oxygenSaturation'];
+
+    function loadData() {
+      // In real implementation, this would trigger a tools/call to refresh data
+      renderChart(sampleData);
+    }
+
+    function renderChart(data) {
+      const svg = document.getElementById('chartSvg');
+      const width = svg.clientWidth;
+      const height = svg.clientHeight;
+      const padding = { top: 20, right: 60, bottom: 40, left: 60 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+
+      // Clear existing
+      svg.innerHTML = '';
+
+      // Create grid lines
+      for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (chartHeight / 5) * i;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', padding.left);
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', width - padding.right);
+        line.setAttribute('y2', y);
+        line.setAttribute('class', 'grid-line');
+        svg.appendChild(line);
+      }
+
+      // Render each active vital
+      activeVitals.forEach((vitalKey, index) => {
+        const config = vitalConfigs[vitalKey];
+        const points = data.vitals.map((v, i) => {
+          const x = padding.left + (chartWidth / (data.vitals.length - 1)) * i;
+          let value;
+          if (vitalKey === 'bloodPressure') {
+            value = v.systolicBP;
+          } else {
+            value = v[vitalKey];
+          }
+          const normalizedValue = (value - config.min) / (config.max - config.min);
+          const y = padding.top + chartHeight - (normalizedValue * chartHeight);
+          return { x, y, value, timestamp: v.timestamp, vital: vitalKey };
+        }).filter(p => !isNaN(p.value));
+
+        // Draw line
+        if (points.length > 1) {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const pathData = points.map((p, i) => 
+            `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+          ).join(' ');
+          path.setAttribute('d', pathData);
+          path.setAttribute('class', 'data-line');
+          path.setAttribute('stroke', config.color);
+          svg.appendChild(path);
+        }
+
+        // Draw points
+        points.forEach(p => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', p.x);
+          circle.setAttribute('cy', p.y);
+          circle.setAttribute('class', 'data-point');
+          circle.setAttribute('fill', config.color);
+          circle.addEventListener('click', () => {
+            sendToAI(`What does a ${config.label} of ${p.value} ${config.unit} at ${new Date(p.timestamp).toLocaleTimeString()} indicate for this patient?`);
+          });
+          circle.addEventListener('mouseenter', (e) => {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.left = e.pageX + 10 + 'px';
+            tooltip.style.top = e.pageY - 30 + 'px';
+            tooltip.style.opacity = 1;
+            tooltip.textContent = `${config.label}: ${p.value} ${config.unit}`;
+          });
+          circle.addEventListener('mouseleave', () => {
+            document.getElementById('tooltip').style.opacity = 0;
+          });
+          svg.appendChild(circle);
+        });
+      });
+
+      renderLegend();
+      renderStats(data);
+      renderEvents(data.criticalEvents || []);
+    }
+
+    function renderLegend() {
+      const legend = document.getElementById('legend');
+      legend.innerHTML = activeVitals.map(vital => {
+        const config = vitalConfigs[vital];
+        return `
+          <div class="legend-item">
+            <div class="legend-dot" style="background: ${config.color}"></div>
+            <span>${config.label}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderStats(data) {
+      const grid = document.getElementById('statsGrid');
+      const latest = data.vitals[data.vitals.length - 1];
+      const first = data.vitals[0];
+
+      grid.innerHTML = `
+        <div class="stat-card ${latest.heartRate > 100 ? 'warning' : ''}">
+          <div class="stat-label">Current Heart Rate</div>
+          <div class="stat-value">${latest.heartRate} <small style="font-size:14px;color:#64748b">bpm</small></div>
+          <div class="stat-context">${latest.heartRate > first.heartRate ? '↑' : '↓'} ${Math.abs(latest.heartRate - first.heartRate)} from start</div>
+        </div>
+        <div class="stat-card ${latest.systolicBP > 140 ? 'warning' : ''}">
+          <div class="stat-label">Blood Pressure</div>
+          <div class="stat-value">${latest.systolicBP}/${latest.diastolicBP}</div>
+          <div class="stat-context">mmHg</div>
+        </div>
+        <div class="stat-card ${latest.oxygenSaturation < 95 ? 'critical' : ''}">
+          <div class="stat-label">O2 Saturation</div>
+          <div class="stat-value">${latest.oxygenSaturation}%</div>
+          <div class="stat-context">${latest.oxygenSaturation < 90 ? '⚠️ Critical' : 'Normal range'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Data Points</div>
+          <div class="stat-value">${data.vitals.length}</div>
+          <div class="stat-context">Over ${data.timeRange}</div>
+        </div>
+      `;
+    }
+
+    function renderEvents(events) {
+      const list = document.getElementById('eventsList');
+      const container = document.getElementById('eventsContainer');
+      
+      if (events.length === 0) {
+        list.style.display = 'none';
+        return;
+      }
+
+      list.style.display = 'block';
+      container.innerHTML = events.map(event => `
+        <div class="event-item">
+          <div class="event-time">${new Date(event.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          <div class="event-details">
+            <div class="event-vital">${event.vital} exceeded threshold</div>
+          </div>
+          <div class="event-value">${event.value}</div>
+          <button class="ai-btn" onclick="sendToAI('Explain the clinical significance of ${event.vital} ${event.value} and what interventions are needed')">Ask AI</button>
+        </div>
+      `).join('');
+    }
+
+    // Event listeners
+    document.querySelectorAll('.vital-toggle').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const vital = toggle.dataset.vital;
+        if (activeVitals.includes(vital)) {
+          activeVitals = activeVitals.filter(v => v !== vital);
+          toggle.classList.remove('active');
+          toggle.classList.add('inactive');
+        } else {
+          activeVitals.push(vital);
+          toggle.classList.remove('inactive');
+          toggle.classList.add('active');
+        }
+        loadData();
+      });
+    });
+
+    document.getElementById('timeRange').addEventListener('change', () => {
+      // Would trigger data refresh with new time range
+      sendToAI(`Show me vital trends for the last ${document.getElementById('timeRange').value}`);
+    });
+
+    document.getElementById('analyzeBtn').addEventListener('click', () => {
+      sendToAI('Analyze these vital sign trends and provide clinical recommendations. Are there any concerning patterns?');
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+    // Initialize
+    initialize();
+    loadData();
+  </script>
+</body>
+</html>

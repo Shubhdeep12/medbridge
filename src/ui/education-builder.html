@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedBridge - Patient Education Builder</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 24px;
+    }
+    h1 {
+      color: #1a365d;
+      font-size: 24px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .builder-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 768px) {
+      .builder-layout { grid-template-columns: 1fr; }
+    }
+    .sidebar {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .topic-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .topic-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    .topic-item:hover { border-color: #3b82f6; }
+    .topic-item.selected {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .topic-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #3b82f6;
+    }
+    .topic-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .control-group label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+    }
+    select, input {
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+    .btn-success:hover { background: #059669; }
+    .preview-pane {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .preview-header {
+      background: #f8fafc;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .preview-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .preview-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .preview-content {
+      padding: 24px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .handout {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: white;
+    }
+    .handout-header {
+      text-align: center;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    .handout-logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a365d;
+      margin-bottom: 8px;
+    }
+    .handout-title {
+      font-size: 20px;
+      color: #475569;
+    }
+    .handout-section {
+      margin-bottom: 24px;
+    }
+    .handout-section h3 {
+      font-size: 16px;
+      color: #1e293b;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .medication-item, .diagnosis-item {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .medication-name {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 15px;
+    }
+    .medication-purpose {
+      color: #64748b;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .instruction-list, .warning-list {
+      margin-top: 10px;
+      padding-left: 16px;
+    }
+    .instruction-list li, .warning-list li {
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .warning-list li {
+      color: #991b1b;
+    }
+    .warning-sign-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 10px;
+    }
+    .warning-sign-item.immediate {
+      background: #fef2f2;
+      border-left-color: #dc2626;
+    }
+    .warning-sign-item.soon {
+      background: #fff7ed;
+      border-left-color: #f59e0b;
+    }
+    .warning-urgency {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .warning-urgency.immediate {
+      background: #fecaca;
+      color: #991b1b;
+    }
+    .warning-urgency.soon {
+      background: #fed7aa;
+      color: #9a3412;
+    }
+    .warning-content {
+      flex: 1;
+    }
+    .warning-symptom {
+      font-weight: 500;
+      color: #1e293b;
+    }
+    .warning-action {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .qr-section {
+      text-align: center;
+      padding: 24px;
+      background: #f8fafc;
+      border-radius: 8px;
+      margin-top: 24px;
+    }
+    .qr-placeholder {
+      width: 150px;
+      height: 150px;
+      background: white;
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+    }
+    .qr-text {
+      font-size: 13px;
+      color: #64748b;
+    }
+    .language-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .ai-suggestion {
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .ai-suggestion h4 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ai-suggestion p {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
+      Patient Education Builder
+    </h1>
+    <p class="subtitle">Create personalized, language-specific education materials with AI assistance</p>
+
+    <div class="ai-suggestion">
+      <h4>✨ AI Tip</h4>
+      <p>Select relevant topics based on the patient's diagnoses and medications. The AI will customize the language level and content appropriately.</p>
+    </div>
+
+    <div class="builder-layout">
+      <div class="sidebar">
+        <div class="section-title">Education Topics</div>
+        <div class="topic-list">
+          <div class="topic-item selected" data-topic="medications">
+            <input type="checkbox" checked>
+            <div class="topic-icon" style="background: #dbeafe;">💊</div>
+            <div>
+              <div style="font-weight: 500; font-size: 14px;">Medications</div>
+              <div style="font-size: 12px; color: #64748b;">Instructions & side effects</div>
+            </div>
+          </div>
+          <div class="topic-item selected" data-topic="diagnosis">
+            <input type="checkbox" checked>
+            <div class="topic-icon" style="background: #fce7f3;">🏥</div>
+            <div>
+              <div style="font-weight: 500; font-size: 14px;">Diagnosis</div>
+              <div style="font-size: 12px; color: #64748b;">Condition explanations</div>
+            </div>
+          </div>
+          <div class="topic-item" data-topic="procedures">
+            <input type="checkbox">
+            <div class="topic-icon" style="background: #f3e8ff;">🔬</div>
+            <div>
+              <div style="font-weight: 500; font-size: 14px;">Procedures</div>
+              <div style="font-size: 12px; color: #64748b;">What to expect</div>
+            </div>
+          </div>
+          <div class="topic-item" data-topic="lifestyle">
+            <input type="checkbox">
+            <div class="topic-icon" style="background: #dcfce7;">🥗</div>
+            <div>
+              <div style="font-weight: 500; font-size: 14px;">Lifestyle</div>
+              <div style="font-size: 12px; color: #64748b;">Diet, activity, sleep</div>
+            </div>
+          </div>
+          <div class="topic-item selected" data-topic="followUp">
+            <input type="checkbox" checked>
+            <div class="topic-icon" style="background: #fef3c7;">📅</div>
+            <div>
+              <div style="font-weight: 500; font-size: 14px;">Follow-up</div>
+              <div style="font-size: 12px; color: #64748b;">Appointments & tests</div>
+            </div>
+          </div>
+          <div class="topic-item selected" data-topic="warningSigns">
+            <input type="checkbox" checked>
+            <div class="topic-icon" style="background: #fee2e2;">⚠️</div>
+            <div>
+              <div style="font-weight: 500; font-size: 14px;">Warning Signs</div>
+              <div style="font-size: 12px; color: #64748b;">When to call doctor</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Output Options</div>
+        <div class="controls">
+          <div class="control-group">
+            <label>Language</label>
+            <select id="language">
+              <option value="en">🇺🇸 English</option>
+              <option value="es">🇪🇸 Spanish</option>
+              <option value="fr">🇫🇷 French</option>
+              <option value="zh">🇨🇳 Chinese</option>
+              <option value="ar">🇸🇦 Arabic</option>
+              <option value="hi">🇮🇳 Hindi</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Format</label>
+            <select id="format">
+              <option value="handout">📄 Handout</option>
+              <option value="qr">📱 QR Code Only</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="generateBtn" style="margin-top: 16px; width: 100%;">
+          🔄 Generate Materials
+        </button>
+      </div>
+
+      <div class="preview-pane">
+        <div class="preview-header">
+          <div class="preview-title">Preview</div>
+          <div class="preview-actions">
+            <span class="language-badge" id="langBadge">🇺🇸 English</span>
+            <button class="btn btn-secondary" id="printBtn">🖨️ Print</button>
+            <button class="btn btn-success" id="downloadBtn">⬇️ Download PDF</button>
+          </div>
+        </div>
+        <div class="preview-content" id="previewContent">
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <h3>Your education materials will appear here</h3>
+            <p>Select topics and click "Generate Materials" to create personalized patient education handouts.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // MCP Apps Communication
+    let toolInput = {};
+    let generatedContent = null;
+
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (data.jsonrpc === '2.0') {
+        if (data.method === 'ui/notifications/tool-input') {
+          toolInput = data.params.arguments;
+          // Auto-generate on load
+          generateMaterials();
+        } else if (data.method === 'ui/notifications/tool-result') {
+          renderHandout(data.params.result);
+        }
+      }
+    });
+
+    function initialize() {
+      window.parent.postMessage({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'ui/initialize',
+        params: {}
+      }, '*');
+    }
+
+    function sendToAI(message) {
+      window.parent.postMessage({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'ui/message',
+        params: {
+          role: 'user',
+          content: { type: 'text', text: message }
+        }
+      }, '*');
+    }
+
+    function updateContext(context) {
+      window.parent.postMessage({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'ui/update-model-context',
+        params: { structuredContent: context }
+      }, '*');
+    }
+
+    // Sample data structure
+    const sampleData = {
+      patientName: 'John Smith',
+      language: 'en',
+      content: {
+        medications: [
+          {
+            name: 'Lisinopril 10mg',
+            purpose: 'To lower blood pressure and protect your heart',
+            instructions: 'Take once daily in the morning with or without food',
+            sideEffects: ['Dizziness', 'Dry cough', 'Headache'],
+            warnings: ['Do not take if pregnant', 'Check blood pressure regularly']
+          },
+          {
+            name: 'Metformin 500mg',
+            purpose: 'To control blood sugar levels',
+            instructions: 'Take with meals to reduce stomach upset',
+            sideEffects: ['Nausea', 'Diarrhea', 'Metallic taste'],
+            warnings: ['Take with food', 'Monitor blood sugar']
+          }
+        ],
+        diagnosis: [
+          {
+            condition: 'Type 2 Diabetes',
+            explanation: 'A condition where your body has difficulty using sugar for energy',
+            whatToExpect: 'With proper management, most people live full, healthy lives'
+          },
+          {
+            condition: 'Hypertension (High Blood Pressure)',
+            explanation: 'Your blood pressure is higher than recommended levels',
+            whatToExpect: 'Medications and lifestyle changes can effectively control this'
+          }
+        ],
+        warningSigns: [
+          { symptom: 'Blood sugar below 70 or above 300', action: 'Call your doctor immediately', urgency: 'immediate' },
+          { symptom: 'Severe dizziness or fainting', action: 'Seek emergency care', urgency: 'immediate' },
+          { symptom: 'Persistent nausea or vomiting', action: 'Contact your doctor within 24 hours', urgency: 'soon' },
+          { symptom: 'New or worsening symptoms', action: 'Schedule follow-up appointment', urgency: 'soon' }
+        ],
+        followUp: {
+          appointments: [
+            'Primary care visit in 2 weeks',
+            'Diabetes education class next month'
+          ],
+          tests: [
+            'HbA1c blood test in 3 months',
+            'Annual eye examination'
+          ],
+          contactInfo: 'Call (555) 123-4567 for questions or concerns'
+        }
+      }
+    };
+
+    function generateMaterials() {
+      const topics = Array.from(document.querySelectorAll('.topic-item.selected')).map(el => el.dataset.topic);
+      const language = document.getElementById('language').value;
+      const format = document.getElementById('format').value;
+
+      // Update language badge
+      const langNames = {
+        en: '🇺🇸 English',
+        es: '🇪🇸 Spanish',
+        fr: '🇫🇷 French',
+        zh: '🇨🇳 Chinese',
+        ar: '🇸🇦 Arabic',
+        hi: '🇮🇳 Hindi'
+      };
+      document.getElementById('langBadge').textContent = langNames[language];
+
+      // Send context update
+      updateContext({
+        educationTopics: topics,
+        language: language,
+        format: format
+      });
+
+      // In real implementation, this would trigger tool call
+      renderHandout(sampleData);
+
+      // Notify AI
+      sendToAI(`Generate patient education for ${topics.join(', ')} in ${langNames[language]}`);
+    }
+
+    function renderHandout(data) {
+      const container = document.getElementById('previewContent');
+      const topics = Array.from(document.querySelectorAll('.topic-item.selected')).map(el => el.dataset.topic);
+
+      let sections = '';
+
+      // Medications section
+      if (topics.includes('medications') && data.content.medications?.length) {
+        sections += `
+          <div class="handout-section">
+            <h3>💊 Your Medications</h3>
+            ${data.content.medications.map(med => `
+              <div class="medication-item">
+                <div class="medication-name">${med.name}</div>
+                <div class="medication-purpose">${med.purpose}</div>
+                <div style="margin-top: 10px;">
+                  <strong>How to take:</strong> ${med.instructions}
+                </div>
+                <ul class="instruction-list">
+                  ${med.sideEffects.map(e => `<li>May cause: ${e}</li>`).join('')}
+                </ul>
+                <ul class="warning-list">
+                  ${med.warnings.map(w => `<li>⚠️ ${w}</li>`).join('')}
+                </ul>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      // Diagnosis section
+      if (topics.includes('diagnosis') && data.content.diagnosis?.length) {
+        sections += `
+          <div class="handout-section">
+            <h3>🏥 About Your Conditions</h3>
+            ${data.content.diagnosis.map(diag => `
+              <div class="diagnosis-item">
+                <div class="medication-name">${diag.condition}</div>
+                <p style="margin-top: 8px; color: #475569;">${diag.explanation}</p>
+                <p style="margin-top: 8px; font-size: 13px; color: #64748b;">
+                  <strong>What to expect:</strong> ${diag.whatToExpect}
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      // Warning Signs section
+      if (topics.includes('warningSigns') && data.content.warningSigns?.length) {
+        sections += `
+          <div class="handout-section">
+            <h3>⚠️ Warning Signs - When to Get Help</h3>
+            <p style="margin-bottom: 16px; color: #475569; font-size: 14px;">
+              Call your doctor or seek emergency care if you experience:
+            </p>
+            ${data.content.warningSigns.map(warning => `
+              <div class="warning-sign-item ${warning.urgency}">
+                <span class="warning-urgency ${warning.urgency}">${warning.urgency}</span>
+                <div class="warning-content">
+                  <div class="warning-symptom">${warning.symptom}</div>
+                  <div class="warning-action">${warning.action}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      // Follow-up section
+      if (topics.includes('followUp') && data.content.followUp) {
+        sections += `
+          <div class="handout-section">
+            <h3>📅 Your Follow-up Plan</h3>
+            <p style="font-weight: 600; margin-bottom: 8px;">Appointments:</p>
+            <ul class="instruction-list">
+              ${data.content.followUp.appointments.map(a => `<li>${a}</li>`).join('')}
+            </ul>
+            <p style="font-weight: 600; margin: 16px 0 8px;">Tests Needed:</p>
+            <ul class="instruction-list">
+              ${data.content.followUp.tests.map(t => `<li>${t}</li>`).join('')}
+            </ul>
+            <p style="margin-top: 16px; padding: 12px; background: #dbeafe; border-radius: 6px; color: #1e40af;">
+              <strong>Questions?</strong> ${data.content.followUp.contactInfo}
+            </p>
+          </div>
+        `;
+      }
+
+      const format = document.getElementById('format').value;
+      const showQR = format === 'qr' || format === 'both';
+
+      container.innerHTML = `
+        <div class="handout">
+          <div class="handout-header">
+            <div class="handout-logo">🏥 MedBridge</div>
+            <div class="handout-title">Patient Education Materials</div>
+            <div style="margin-top: 8px; color: #64748b; font-size: 13px;">
+              Prepared for: <strong>${data.patientName}</strong> | ${new Date().toLocaleDateString()}
+            </div>
+          </div>
+          ${sections}
+          ${showQR ? `
+            <div class="qr-section">
+              <div class="qr-placeholder">📱</div>
+              <div class="qr-text">Scan for digital access to your education materials</div>
+              <div style="margin-top: 8px; font-size: 11px; color: #94a3b8;">
+                https://medbridge.app/education/patient-id
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Event listeners
+    document.querySelectorAll('.topic-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.type !== 'checkbox') {
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          checkbox.checked = !checkbox.checked;
+        }
+        item.classList.toggle('selected', item.querySelector('input').checked);
+      });
+    });
+
+    document.getElementById('generateBtn').addEventListener('click', generateMaterials);
+
+    document.getElementById('printBtn').addEventListener('click', () => {
+      window.print();
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      sendToAI('Download this education material as a PDF');
+    });
+
+    document.getElementById('language').addEventListener('change', () => {
+      const lang = document.getElementById('language').value;
+      const langNames = {
+        en: 'English', es: 'Spanish', fr: 'French', zh: 'Chinese', ar: 'Arabic', hi: 'Hindi'
+      };
+      sendToAI(`Translate education materials to ${langNames[lang]}`);
+    });
+
+    // Initialize
+    initialize();
+  </script>
+</body>
+</html>

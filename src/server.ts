@@ -16,6 +16,8 @@ import { getPatientVitalsTool, getPatientVitals } from './tools/get-patient-vita
 import { getRecentNurseNotesTool, getRecentNurseNotes } from './tools/get-nurse-notes.js';
 import { handoverSummaryTool, generateHandoverSummary } from './tools/handover-summary.js';
 import { escalateToAttendingTool, escalateToAttending } from './tools/escalate-to-attending.js';
+import { vitalTrendsDashboardTool, vitalTrendsDashboard } from './tools/vital-trends-dashboard.js';
+import { patientEducationTool, patientEducationGenerator } from './tools/patient-education-generator.js';
 
 // Import core utilities
 import { extractSHARPContext, validateSHARPContext } from './core/sharp-context.js';
@@ -37,7 +39,9 @@ const tools = [
   getPatientVitalsTool,
   getRecentNurseNotesTool,
   handoverSummaryTool,
-  escalateToAttendingTool
+  escalateToAttendingTool,
+  vitalTrendsDashboardTool,
+  patientEducationTool
 ];
 
 const toolHandlers: Record<string, (args: Record<string, unknown>, context: SHARPContext | null) => Promise<unknown>> = {
@@ -56,6 +60,16 @@ const toolHandlers: Record<string, (args: Record<string, unknown>, context: SHAR
   'escalate_to_attending': async (args, context) => escalateToAttending(
     args as { patientId: string; level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'; message: string; reasonCode?: string },
     context
+  ),
+  'vital_trends_dashboard': async (args, context) => vitalTrendsDashboard(
+    args as { patientId: string; timeRange?: '6h' | '12h' | '24h' | '48h' | '7d'; vitalTypes?: Array<'heartRate' | 'bloodPressure' | 'temperature' | 'oxygenSaturation' | 'respiratoryRate' | 'painScore'> },
+    context,
+    {}
+  ),
+  'patient_education_generator': async (args, context) => patientEducationGenerator(
+    args as { patientId: string; topics?: Array<'medications' | 'diagnosis' | 'procedures' | 'lifestyle' | 'followUp' | 'warningSigns'>; language?: 'en' | 'es' | 'fr' | 'zh' | 'ar' | 'hi'; format?: 'handout' | 'qr' | 'both' },
+    context,
+    {}
   )
 };
 

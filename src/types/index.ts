@@ -32,6 +32,13 @@ export interface MCPTool {
   description: string;
   inputSchema: JSONSchema;
   outputSchema?: JSONSchema;
+  // MCP Apps extension - UI resource metadata per SEP-1865
+  _meta?: {
+    ui?: {
+      resourceUri?: string;
+      visibility?: Array<'model' | 'app'>;
+    };
+  };
 }
 
 export interface JSONSchema {
