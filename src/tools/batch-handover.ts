@@ -9,7 +9,7 @@ import type { SHARPContext, PatientRecord } from '../types/index.js';
 import { fetchPatientRecord } from '../core/fhir-client.js';
 
 const inputSchema = z.object({
-  patientIds: z.array(z.string()).min(1).max(20),
+  patientIds: z.array(z.string()).max(20).default([]),
   includeRecommendations: z.boolean().default(true)
 });
 
@@ -48,11 +48,22 @@ export async function generateBatchHandover(
 ): Promise<BatchHandoverOutput> {
   // Validate input
   const validated = inputSchema.parse(input);
+  
+  // If no patientIds provided, fallback to context patientId
+  let patientIds = validated.patientIds;
+  if (patientIds.length === 0 && context?.patientId) {
+    patientIds = [context.patientId];
+  }
+  
+  if (patientIds.length === 0) {
+    throw new Error('patientIds is required - either provide explicit patient IDs or ensure FHIR context is set with a current patient');
+  }
+  
   const timestamp = new Date().toISOString();
   
   // Fetch all patient records in parallel
   const patientResults = await Promise.all(
-    validated.patientIds.map(async (patientId) => {
+    patientIds.map(async (patientId) => {
       try {
         const record = await fetchPatientRecord(patientId, context, env);
         if (!record) {

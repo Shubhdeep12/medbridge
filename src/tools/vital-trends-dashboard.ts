@@ -33,7 +33,6 @@ export interface VitalTrendsDashboardOutput {
     value: number;
     threshold: string;
   }>;
-  uiResourceUri: string;
   summary: string;
 }
 
@@ -87,10 +86,9 @@ export const vitalTrendsDashboardTool: MCPTool = {
           }
         }
       },
-      uiResourceUri: { type: 'string' },
       summary: { type: 'string' }
     },
-    required: ['status', 'patientId', 'uiResourceUri', 'summary']
+    required: ['status', 'patientId', 'summary']
   },
   // MCP Apps UI Resource Metadata
   _meta: {
@@ -148,7 +146,6 @@ export async function vitalTrendsDashboard(
       vitalTypes: validated.vitalTypes,
       dataPoints: 0,
       criticalEvents: [],
-      uiResourceUri: 'ui://medbridge/vital-trends-chart',
       summary: `No vital sign data available for the past ${validated.timeRange}. Consider extending the time range or checking if vitals have been recorded.`
     };
   }
@@ -244,8 +241,7 @@ export async function vitalTrendsDashboard(
     vitalTypes: validated.vitalTypes,
     dataPoints: filteredVitals.length,
     criticalEvents: criticalEvents.slice(0, 10), // Limit to 10 events
-    uiResourceUri: 'ui://medbridge/vital-trends-chart',
-    summary: `${criticalSummary}${trendSummary} Interactive chart loaded with ${filteredVitals.length} data points. Click any data point to analyze trends or ask the AI about specific patterns.`
+    summary: `${criticalSummary}${trendSummary} Vital trends analysis complete with ${filteredVitals.length} data points.`
   };
 }
 

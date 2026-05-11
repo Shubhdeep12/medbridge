@@ -66,7 +66,6 @@ export interface PatientEducationOutput {
   };
   summary: string;
   qrCode?: string;
-  uiResourceUri: string;
 }
 
 // MCP Tool Definition with MCP Apps metadata
@@ -115,10 +114,9 @@ export const patientEducationTool: MCPTool = {
       language: { type: 'string' },
       format: { type: 'string' },
       summary: { type: 'string' },
-      qrCode: { type: 'string' },
-      uiResourceUri: { type: 'string' }
+      qrCode: { type: 'string' }
     },
-    required: ['status', 'patientId', 'uiResourceUri', 'summary']
+    required: ['status', 'patientId', 'summary']
   },
   // MCP Apps UI Resource Metadata
   _meta: {
@@ -204,8 +202,7 @@ export async function patientEducationGenerator(
     format: validated.format,
     content,
     summary: summaryParts.filter(Boolean).join(' '),
-    qrCode,
-    uiResourceUri: 'ui://medbridge/education-builder'
+    qrCode
   };
 }
 

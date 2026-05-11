@@ -107,6 +107,14 @@ app.post('/mcp', async (req: Request, res: Response) => {
         result = handleInitialize();
         break;
         
+      case 'resources/list':
+        result = handleResourcesList();
+        break;
+        
+      case 'resources/read':
+        result = handleResourcesRead(request.params as { uri: string });
+        break;
+        
       default:
         return res.json(createErrorResponse(request.id, -32601, `Method not found: ${request.method}`));
     }
@@ -167,7 +175,7 @@ function handleToolsList(): { tools: typeof tools } {
 async function handleToolsCall(
   params: { name: string; arguments: Record<string, unknown> },
   context: SHARPContext | null
-): Promise<{ content: Array<{ type: string; content: unknown }>; isError: boolean }> {
+): Promise<{ content: Array<{ type: 'text'; text: string }>; isError: boolean }> {
   const { name, arguments: args } = params;
   
   // Check if tool exists
@@ -190,8 +198,8 @@ async function handleToolsCall(
   return {
     content: [
       {
-        type: 'structured',
-        content: result
+        type: 'text',
+        text: JSON.stringify(result, null, 2)
       }
     ],
     isError: false
@@ -201,7 +209,8 @@ async function handleToolsCall(
 function handleInitialize(): { 
   protocolVersion: string; 
   capabilities: { 
-    tools: { listChanged: boolean }; 
+    tools: { listChanged: boolean };
+    resources?: { listChanged: boolean };
   }; 
   serverInfo: { 
     name: string; 
@@ -213,6 +222,9 @@ function handleInitialize(): {
     capabilities: {
       tools: {
         listChanged: false
+      },
+      resources: {
+        listChanged: false
       }
     },
     serverInfo: {
@@ -220,6 +232,61 @@ function handleInitialize(): {
       version: '1.0.0'
     }
   };
+}
+
+function handleResourcesList(): { resources: Array<{ uri: string; name: string; mimeType: string }> } {
+  return {
+    resources: [
+      {
+        uri: 'ui://medbridge/vital-trends-chart',
+        name: 'Vital Trends Dashboard',
+        mimeType: 'text/html;profile=mcp-app'
+      },
+      {
+        uri: 'ui://medbridge/education-builder',
+        name: 'Patient Education Builder',
+        mimeType: 'text/html;profile=mcp-app'
+      }
+    ]
+  };
+}
+
+function handleResourcesRead(params: { uri: string }): { contents: Array<{ uri: string; mimeType: string; text: string }> } {
+  const { uri } = params;
+  
+  if (uri === 'ui://medbridge/vital-trends-chart') {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'text/html;profile=mcp-app',
+        text: `<!DOCTYPE html>
+<html>
+<head><title>Vital Trends</title></head>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h1>🏥 Vital Trends Dashboard</h1>
+  <p>MCP App UI loaded successfully!</p>
+</body></html>`
+      }]
+    };
+  }
+  
+  if (uri === 'ui://medbridge/education-builder') {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'text/html;profile=mcp-app',
+        text: `<!DOCTYPE html>
+<html>
+<head><title>Education Builder</title></head>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h1>📚 Patient Education Builder</h1>
+  <p>MCP App UI loaded successfully!</p>
+</body></html>`
+      }]
+    };
+  }
+  
+  throw new Error(`Resource not found: ${uri}`);
 }
 
 // ============================================================================

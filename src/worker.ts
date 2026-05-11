@@ -68,6 +68,54 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, X-FHIR-Server-URL, X-FHIR-Access-Token, X-Patient-ID',
 };
 
+// Serve UI HTML files for MCP Apps
+async function serveUIFile(_filename: string): Promise<Response> {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MedBridge</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fff; padding: 16px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 18px; font-weight: 500; color: #111; margin-bottom: 16px; }
+    .panel { background: #f8f9fa; border-radius: 6px; padding: 16px; }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #666; font-size: 13px; }
+    .value { color: #111; font-size: 13px; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MedBridge</h1>
+    <div class="panel">
+      <div class="row">
+        <span class="label">Status</span>
+        <span class="value">Active</span>
+      </div>
+      <div class="row">
+        <span class="label">Protocol</span>
+        <span class="value">MCP Apps</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.parent.postMessage({ type: 'MCP_APP_READY' }, '*');
+  </script>
+</body>
+</html>`;
+  
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html',
+      'Cache-Control': 'public, max-age=3600',
+      ...corsHeaders
+    }
+  });
+}
+
 export default {
   async fetch(request: Request, env: Record<string, string>): Promise<Response> {
     // Handle CORS preflight
@@ -105,6 +153,15 @@ export default {
     // MCP JSON-RPC endpoint
     if (path === '/mcp' && request.method === 'POST') {
       return handleMCPRequest(request, env);
+    }
+
+    // UI App Routes - Serve MCP Apps HTML
+    if (path === '/ui/vital-trends-chart') {
+      return serveUIFile('vital-trends-chart.html');
+    }
+    
+    if (path === '/ui/education-builder') {
+      return serveUIFile('education-builder.html');
     }
 
     // 404
@@ -258,20 +315,19 @@ function handleToolsList(): { tools: unknown[] } {
       },
       {
         name: 'batch_handover',
-        description: 'Generates handover summaries for multiple patients simultaneously with risk prioritization. Perfect for shift change with 6+ patients. Returns patients sorted by criticality.',
+        description: 'Generates handover summaries for multiple patients simultaneously with risk prioritization. Perfect for shift change with 6+ patients. Returns patients sorted by criticality. IMPORTANT: If patientIds not provided, uses current patient from FHIR context.',
         inputSchema: {
           type: 'object',
           properties: {
             patientIds: { 
               type: 'array', 
               items: { type: 'string' },
-              description: 'Array of patient IDs (1-20 patients)',
-              minItems: 1,
+              description: 'Array of patient IDs (optional - uses FHIR context if empty)',
               maxItems: 20
             },
             includeRecommendations: { type: 'boolean', default: true }
           },
-          required: ['patientIds']
+          required: []
         }
       },
       {
@@ -454,68 +510,48 @@ function getVitalTrendsChartHTML(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MedBridge - Vital Trends Dashboard</title>
+  <title>Vital Trends</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 24px; }
-    h1 { color: #1a365d; font-size: 24px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
-    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
-    .controls { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; padding: 16px; background: #f8fafc; border-radius: 8px; }
-    .control-group { display: flex; flex-direction: column; gap: 4px; }
-    .control-group label { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
-    select, button { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; background: white; cursor: pointer; }
-    button { background: #3b82f6; color: white; border: none; font-weight: 500; }
-    button:hover { background: #2563eb; }
-    .vital-toggles { display: flex; gap: 12px; flex-wrap: wrap; }
-    .vital-toggle { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; }
-    .vital-toggle.active { background: #dbeafe; color: #1e40af; }
-    .vital-toggle.inactive { background: #f1f5f9; color: #64748b; }
-    .chart-container { position: relative; height: 400px; margin-bottom: 24px; background: #fafafa; border-radius: 8px; padding: 16px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; }
-    .stat-card { background: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6; }
-    .stat-card.critical { border-left-color: #ef4444; }
-    .stat-card.warning { border-left-color: #f59e0b; }
-    .stat-label { font-size: 12px; color: #64748b; text-transform: uppercase; }
-    .stat-value { font-size: 24px; font-weight: 600; color: #1e293b; }
-    .events-list { margin-top: 24px; }
-    .event-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-left: 3px solid #ef4444; background: #fef2f2; border-radius: 0 6px 6px 0; margin-bottom: 8px; }
-    .ai-btn { background: #7c3aed; }
-    .ai-btn:hover { background: #6d28d9; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fff; padding: 16px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 18px; font-weight: 500; color: #111; margin-bottom: 16px; }
+    .data-panel { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+    .data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef; }
+    .data-row:last-child { border-bottom: none; }
+    .label { color: #666; font-size: 13px; }
+    .value { color: #111; font-size: 13px; font-weight: 500; }
+    .status-normal { color: #198754; }
+    .status-warning { color: #ffc107; }
+    .status-critical { color: #dc3545; }
+    .timestamp { color: #999; font-size: 11px; margin-top: 12px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>📊 Vital Trends Dashboard</h1>
-    <p class="subtitle">Interactive visualization with AI-powered analysis</p>
-    <div class="controls">
-      <div class="control-group">
-        <label>Time Range</label>
-        <select id="timeRange"><option value="6h">Last 6 Hours</option><option value="12h">Last 12 Hours</option><option value="24h" selected>Last 24 Hours</option><option value="48h">Last 48 Hours</option><option value="7d">Last 7 Days</option></select>
+    <h1>Vital Trends</h1>
+    <div class="data-panel">
+      <div class="data-row">
+        <span class="label">Heart Rate</span>
+        <span class="value status-normal">-- bpm</span>
       </div>
-      <div class="vital-toggles">
-        <div class="vital-toggle active" data-vital="hr"><span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block"></span> Heart Rate</div>
-        <div class="vital-toggle active" data-vital="bp"><span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;display:inline-block"></span> Blood Pressure</div>
-        <div class="vital-toggle active" data-vital="o2"><span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block"></span> O2 Saturation</div>
+      <div class="data-row">
+        <span class="label">Blood Pressure</span>
+        <span class="value">--/--</span>
       </div>
-      <button class="ai-btn" onclick="sendToAI('Analyze these vital sign trends')">✨ AI Analysis</button>
-    </div>
-    <div class="chart-container">
-      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8">
-        Interactive chart will render here with live data from tool results
+      <div class="data-row">
+        <span class="label">O2 Saturation</span>
+        <span class="value status-normal">--%</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Temperature</span>
+        <span class="value">--.-</span>
       </div>
     </div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Latest Heart Rate</div><div class="stat-value">72 <small style="font-size:14px">bpm</small></div></div>
-      <div class="stat-card"><div class="stat-label">Blood Pressure</div><div class="stat-value">120/80</div></div>
-      <div class="stat-card"><div class="stat-label">O2 Saturation</div><div class="stat-value">98%</div></div>
-    </div>
+    <p class="timestamp">Data from tool execution will populate here</p>
   </div>
   <script>
-    function sendToAI(message) {
-      window.parent.postMessage({ jsonrpc: '2.0', id: Date.now(), method: 'ui/message', params: { role: 'user', content: { type: 'text', text: message } } }, '*');
-    }
-    window.parent.postMessage({ jsonrpc: '2.0', id: 1, method: 'ui/initialize', params: {} }, '*');
+    window.parent.postMessage({ type: 'MCP_APP_READY' }, '*');
   </script>
 </body>
 </html>`;
@@ -527,69 +563,43 @@ function getEducationBuilderHTML(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MedBridge - Patient Education Builder</title>
+  <title>Education Materials</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; padding: 20px; }
-    .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 24px; }
-    h1 { color: #1a365d; font-size: 24px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
-    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
-    .builder-layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; }
-    @media (max-width: 768px) { .builder-layout { grid-template-columns: 1fr; } }
-    .sidebar { background: #f8fafc; border-radius: 8px; padding: 20px; }
-    .section-title { font-size: 13px; font-weight: 600; color: #475569; text-transform: uppercase; margin-bottom: 12px; }
-    .topic-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-    .topic-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: white; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
-    .topic-item.selected { border-color: #3b82f6; background: #eff6ff; }
-    .btn { padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; }
-    .btn-primary { background: #3b82f6; color: white; }
-    .btn-success { background: #10b981; color: white; }
-    .preview-pane { background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-    .preview-header { background: #f8fafc; padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-    .preview-content { padding: 24px; max-height: 600px; overflow-y: auto; }
-    .handout { max-width: 600px; margin: 0 auto; padding: 32px; border: 1px solid #e2e8f0; border-radius: 8px; }
-    .handout-header { text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 24px; }
-    .warning-sign-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 0 6px 6px 0; margin-bottom: 10px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fff; padding: 16px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 18px; font-weight: 500; color: #111; margin-bottom: 16px; }
+    .content-panel { background: #f8f9fa; border-radius: 6px; padding: 16px; }
+    .section { margin-bottom: 16px; }
+    .section-title { font-size: 13px; font-weight: 500; color: #333; margin-bottom: 8px; text-transform: uppercase; }
+    .section-body { color: #555; font-size: 13px; line-height: 1.5; }
+    .alert-box { background: #fff3cd; border-left: 3px solid #ffc107; padding: 12px; margin-top: 12px; border-radius: 0 4px 4px 0; }
+    .alert-title { font-weight: 500; color: #856404; font-size: 12px; margin-bottom: 4px; }
+    .alert-text { color: #856404; font-size: 12px; }
+    .timestamp { color: #999; font-size: 11px; margin-top: 16px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>📚 Patient Education Builder</h1>
-    <p class="subtitle">Create personalized education materials</p>
-    <div class="builder-layout">
-      <div class="sidebar">
-        <div class="section-title">Topics</div>
-        <div class="topic-list">
-          <div class="topic-item selected">💊 Medications</div>
-          <div class="topic-item selected">🏥 Diagnosis</div>
-          <div class="topic-item">📅 Follow-up</div>
-          <div class="topic-item selected">⚠️ Warning Signs</div>
-        </div>
-        <button class="btn btn-primary" style="width:100%" onclick="generateMaterials()">Generate</button>
+    <h1>Patient Education</h1>
+    <div class="content-panel">
+      <div class="section">
+        <div class="section-title">Medications</div>
+        <div class="section-body">Prescribed medications and dosing instructions will appear here.</div>
       </div>
-      <div class="preview-pane">
-        <div class="preview-header"><strong>Preview</strong> <button class="btn btn-success" onclick="downloadPDF()">Download PDF</button></div>
-        <div class="preview-content">
-          <div class="handout">
-            <div class="handout-header">
-              <h2>🏥 MedBridge</h2>
-              <p>Patient Education Materials</p>
-            </div>
-            <div class="warning-sign-item"><strong>⚠️ Call 911:</strong> Chest pain or difficulty breathing</div>
-            <div class="warning-sign-item" style="background:#fff7ed;border-left-color:#f59e0b"><strong>📞 Call Doctor:</strong> Fever over 101°F</div>
-          </div>
-        </div>
+      <div class="section">
+        <div class="section-title">Care Instructions</div>
+        <div class="section-body">Personalized care instructions based on diagnosis.</div>
+      </div>
+      <div class="alert-box">
+        <div class="alert-title">When to Seek Care</div>
+        <div class="alert-text">Emergency and routine care guidance will populate from tool results.</div>
       </div>
     </div>
+    <p class="timestamp">Generated from tool execution</p>
   </div>
   <script>
-    function generateMaterials() {
-      window.parent.postMessage({ jsonrpc: '2.0', id: Date.now(), method: 'ui/message', params: { role: 'user', content: { type: 'text', text: 'Generate patient education handout' } } }, '*');
-    }
-    function downloadPDF() {
-      window.parent.postMessage({ jsonrpc: '2.0', id: Date.now(), method: 'ui/message', params: { role: 'user', content: { type: 'text', text: 'Download education materials as PDF' } } }, '*');
-    }
-    window.parent.postMessage({ jsonrpc: '2.0', id: 1, method: 'ui/initialize', params: {} }, '*');
+    window.parent.postMessage({ type: 'MCP_APP_READY' }, '*');
   </script>
 </body>
 </html>`;
