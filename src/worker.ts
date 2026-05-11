@@ -11,60 +11,9 @@ import { getPatientVitals } from './tools/get-patient-vitals.js';
 import { getRecentNurseNotes } from './tools/get-nurse-notes.js';
 import { generateHandoverSummary } from './tools/handover-summary.js';
 import { escalateToAttending } from './tools/escalate-to-attending.js';
+import { logVitals } from './tools/log-vitals.js';
+import { generateBatchHandover } from './tools/batch-handover.js';
 
-// A2A Agent Card
-const agentCard = {
-  "name": "medbridge-handover-agent",
-  "description": "Clinical handover specialist agent for nursing shift transitions with risk detection and escalation capabilities",
-  "version": "1.0.0",
-  "capabilities": [
-    {
-      "name": "prepare_handover",
-      "description": "Gathers patient data and prepares comprehensive handover summary",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "patientId": { "type": "string", "description": "Patient identifier" },
-          "shiftType": { "type": "string", "enum": ["day_to_night", "night_to_day", "weekday_to_weekend"] }
-        },
-        "required": ["patientId"]
-      }
-    },
-    {
-      "name": "detect_risks",
-      "description": "Analyzes patient data for critical trends and escalation triggers",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "patientId": { "type": "string", "description": "Patient identifier" },
-          "alertThreshold": { "type": "string", "enum": ["low", "medium", "high"], "default": "medium" }
-        },
-        "required": ["patientId"]
-      }
-    },
-    {
-      "name": "escalate_critical",
-      "description": "Escalates critical findings to attending physician",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "patientId": { "type": "string", "description": "Patient identifier" },
-          "level": { "type": "string", "enum": ["LOW", "MODERATE", "HIGH", "CRITICAL"] },
-          "reason": { "type": "string", "description": "Detailed escalation reason" }
-        },
-        "required": ["patientId", "level", "reason"]
-      }
-    }
-  ],
-  "endpoint": "https://medbridge-mcp.chhabrashubhdeep.workers.dev/mcp",
-  "authentication": { "type": "apiKey", "headerName": "X-API-Key" },
-  "skills": ["clinical-handover", "risk-assessment", "vital-signs-analysis", "escalation-management"],
-  "supportedContexts": ["patient", "encounter", "shift"],
-  "fhirCapabilities": {
-    "resources": ["Patient", "Observation", "DocumentReference", "CommunicationRequest"],
-    "operations": ["read", "search"]
-  }
-};
 
 // Tool handlers
 const toolHandlers: Record<string, (args: Record<string, unknown>, context: SHARPContext | null, env: Record<string, string>) => Promise<unknown>> = {
@@ -85,6 +34,16 @@ const toolHandlers: Record<string, (args: Record<string, unknown>, context: SHAR
   ),
   'escalate_to_attending': async (args, context, env) => escalateToAttending(
     args as { patientId: string; level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'; message: string; reasonCode?: string },
+    context,
+    env
+  ),
+  'log_vitals': async (args, context, env) => logVitals(
+    args as { patientId: string; temperature?: number; temperatureUnit?: 'C' | 'F'; heartRate?: number; systolicBP?: number; diastolicBP?: number; respiratoryRate?: number; oxygenSaturation?: number; painScore?: number; notes?: string },
+    context,
+    env
+  ),
+  'batch_handover': async (args, context, env) => generateBatchHandover(
+    args as { patientIds: string[]; includeRecommendations?: boolean },
     context,
     env
   )
@@ -134,16 +93,6 @@ export default {
     // MCP JSON-RPC endpoint
     if (path === '/mcp' && request.method === 'POST') {
       return handleMCPRequest(request, env);
-    }
-
-    // A2A Agent Card (well-known endpoint)
-    if (path === '/.well-known/agent.json' && request.method === 'GET') {
-      return new Response(JSON.stringify(agentCard), {
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      });
     }
 
     // 404
@@ -263,6 +212,44 @@ function handleToolsList(): { tools: unknown[] } {
             reasonCode: { type: 'string' }
           },
           required: ['patientId', 'level', 'message']
+        }
+      },
+      {
+        name: 'log_vitals',
+        description: 'Records new vital signs to the FHIR server (temperature, BP, HR, O2 sat, pain score). WRITE operation - creates FHIR Observation resources.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            patientId: { type: 'string', description: 'Patient identifier' },
+            temperature: { type: 'number', description: 'Body temperature (default Celsius)' },
+            temperatureUnit: { type: 'string', enum: ['C', 'F'], description: 'Temperature unit' },
+            heartRate: { type: 'integer', minimum: 30, maximum: 250, description: 'Heart rate in beats/min' },
+            systolicBP: { type: 'integer', minimum: 50, maximum: 300, description: 'Systolic blood pressure' },
+            diastolicBP: { type: 'integer', minimum: 30, maximum: 200, description: 'Diastolic blood pressure' },
+            respiratoryRate: { type: 'integer', minimum: 8, maximum: 60, description: 'Respiratory rate per minute' },
+            oxygenSaturation: { type: 'number', minimum: 70, maximum: 100, description: 'O2 saturation percentage' },
+            painScore: { type: 'integer', minimum: 0, maximum: 10, description: 'Pain score 0-10' },
+            notes: { type: 'string', description: 'Additional notes about this vital sign reading' }
+          },
+          required: ['patientId']
+        }
+      },
+      {
+        name: 'batch_handover',
+        description: 'Generates handover summaries for multiple patients simultaneously with risk prioritization. Perfect for shift change with 6+ patients. Returns patients sorted by criticality.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            patientIds: { 
+              type: 'array', 
+              items: { type: 'string' },
+              description: 'Array of patient IDs (1-20 patients)',
+              minItems: 1,
+              maxItems: 20
+            },
+            includeRecommendations: { type: 'boolean', default: true }
+          },
+          required: ['patientIds']
         }
       }
     ]
