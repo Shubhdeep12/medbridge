@@ -9,7 +9,7 @@ import type { MCPTool, SHARPContext } from '../types/index.js';
 import { fetchPatientRecord } from '../core/fhir-client.js';
 
 const inputSchema = z.object({
-  patientId: z.string().min(1),
+  patientId: z.string().min(1).optional(),
   timeRange: z.enum(['6h', '12h', '24h', '48h', '7d']).default('24h'),
   vitalTypes: z.array(z.enum(['heartRate', 'bloodPressure', 'temperature', 'oxygenSaturation', 'respiratoryRate', 'painScore'])).default(['heartRate', 'bloodPressure', 'oxygenSaturation'])
 });
@@ -40,13 +40,13 @@ export interface VitalTrendsDashboardOutput {
 // MCP Tool Definition with MCP Apps metadata
 export const vitalTrendsDashboardTool: MCPTool = {
   name: 'vital_trends_dashboard',
-  description: 'Opens interactive vitals chart for trend analysis with zoomable time ranges, critical event markers, and bidirectional AI integration. Visualizes vital sign trends over time with color-coded alerts.',
+  description: 'Opens interactive vitals chart for trend analysis with zoomable time ranges, critical event markers, and bidirectional AI integration. Visualizes vital sign trends over time with color-coded alerts. IMPORTANT: patientId will be extracted from FHIR context if not explicitly provided.',
   inputSchema: {
     type: 'object',
     properties: {
       patientId: {
         type: 'string',
-        description: 'Unique patient identifier'
+        description: 'Patient identifier - optional if using FHIR context'
       },
       timeRange: {
         type: 'string',
@@ -64,7 +64,7 @@ export const vitalTrendsDashboardTool: MCPTool = {
         default: ['heartRate', 'bloodPressure', 'oxygenSaturation']
       }
     },
-    required: ['patientId']
+    required: []
   },
   outputSchema: {
     type: 'object',
@@ -108,8 +108,14 @@ export async function vitalTrendsDashboard(
 ): Promise<VitalTrendsDashboardOutput> {
   const validated = inputSchema.parse(input);
   
+  // Extract patientId from input or SHARP context
+  const patientId = validated.patientId || context?.patientId;
+  if (!patientId) {
+    throw new Error('patientId is required - either provide it explicitly or ensure FHIR context is set');
+  }
+  
   // Fetch patient record
-  const record = await fetchPatientRecord(validated.patientId, context, env);
+  const record = await fetchPatientRecord(patientId, context, env);
   
   if (!record) {
     throw new Error(`Patient not found: ${validated.patientId}`);
@@ -136,7 +142,7 @@ export async function vitalTrendsDashboard(
   if (filteredVitals.length === 0) {
     return {
       status: 'NO_DATA',
-      patientId: validated.patientId,
+      patientId: patientId,
       patientName: `${record.patient.name.first} ${record.patient.name.last}`,
       timeRange: validated.timeRange,
       vitalTypes: validated.vitalTypes,
@@ -232,7 +238,7 @@ export async function vitalTrendsDashboard(
   
   return {
     status: 'SUCCESS',
-    patientId: validated.patientId,
+    patientId: patientId,
     patientName: `${record.patient.name.first} ${record.patient.name.last}`,
     timeRange: validated.timeRange,
     vitalTypes: validated.vitalTypes,

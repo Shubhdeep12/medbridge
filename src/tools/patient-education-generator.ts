@@ -9,7 +9,7 @@ import type { MCPTool, SHARPContext } from '../types/index.js';
 import { fetchPatientRecord } from '../core/fhir-client.js';
 
 const inputSchema = z.object({
-  patientId: z.string().min(1),
+  patientId: z.string().min(1).optional(),
   topics: z.array(z.enum(['medications', 'diagnosis', 'procedures', 'lifestyle', 'followUp', 'warningSigns'])).default(['medications', 'diagnosis']),
   language: z.enum(['en', 'es', 'fr', 'zh', 'ar', 'hi']).default('en'),
   format: z.enum(['handout', 'qr', 'both']).default('handout')
@@ -72,13 +72,13 @@ export interface PatientEducationOutput {
 // MCP Tool Definition with MCP Apps metadata
 export const patientEducationTool: MCPTool = {
   name: 'patient_education_generator',
-  description: 'Generates personalized patient education materials with interactive handout builder. Creates customized discharge instructions, medication guides, and warning sign checklists in multiple languages. Includes QR code generation for mobile access.',
+  description: 'Generates personalized patient education materials with interactive handout builder. Creates customized discharge instructions, medication guides, and warning sign checklists in multiple languages. Includes QR code generation for mobile access. IMPORTANT: patientId will be extracted from FHIR context if not explicitly provided.',
   inputSchema: {
     type: 'object',
     properties: {
       patientId: {
         type: 'string',
-        description: 'Unique patient identifier'
+        description: 'Patient identifier - optional if using FHIR context'
       },
       topics: {
         type: 'array',
@@ -102,7 +102,7 @@ export const patientEducationTool: MCPTool = {
         default: 'handout'
       }
     },
-    required: ['patientId']
+    required: []
   },
   outputSchema: {
     type: 'object',
@@ -136,11 +136,17 @@ export async function patientEducationGenerator(
 ): Promise<PatientEducationOutput> {
   const validated = inputSchema.parse(input);
   
+  // Extract patientId from input or SHARP context
+  const patientId = validated.patientId || context?.patientId;
+  if (!patientId) {
+    throw new Error('patientId is required - either provide it explicitly or ensure FHIR context is set');
+  }
+  
   // Fetch patient record
-  const record = await fetchPatientRecord(validated.patientId, context, env);
+  const record = await fetchPatientRecord(patientId, context, env);
   
   if (!record) {
-    throw new Error(`Patient not found: ${validated.patientId}`);
+    throw new Error(`Patient not found: ${patientId}`);
   }
   
   const patient = record.patient;
@@ -190,7 +196,7 @@ export async function patientEducationGenerator(
   
   return {
     status: 'SUCCESS',
-    patientId: validated.patientId,
+    patientId: patientId,
     patientName: `${patient.name.first} ${patient.name.last}`,
     generatedAt,
     topics: validated.topics,
