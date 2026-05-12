@@ -373,11 +373,27 @@ function handleToolsList(): { tools: unknown[] } {
   };
 }
 
+// UI tool metadata mapping for MCP Apps responses
+const uiToolMeta: Record<string, { ui: { resourceUri: string; visibility: string[] } }> = {
+  vital_trends_dashboard: {
+    ui: {
+      resourceUri: 'ui://medbridge/vital-trends-chart',
+      visibility: ['model', 'app']
+    }
+  },
+  patient_education_generator: {
+    ui: {
+      resourceUri: 'ui://medbridge/education-builder',
+      visibility: ['model', 'app']
+    }
+  }
+};
+
 async function handleToolsCall(
   params: { name: string; arguments: Record<string, unknown> },
   context: SHARPContext | null,
   env: Record<string, string>
-): Promise<{ content: Array<{ type: 'text'; text: string }>; isError: boolean }> {
+): Promise<{ content: Array<{ type: 'text'; text: string }>; isError: boolean; _meta?: { ui: { resourceUri: string; visibility: string[] } } }> {
   const { name, arguments: args } = params;
 
   const handler = toolHandlers[name];
@@ -406,10 +422,18 @@ async function handleToolsCall(
 
   const result = await handler(mergedArgs, context, env);
 
-  return {
+  // Build response with _meta for UI tools per MCP Apps spec
+  const response: { content: Array<{ type: 'text'; text: string }>; isError: boolean; _meta?: { ui: { resourceUri: string; visibility: string[] } } } = {
     content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
     isError: false
   };
+
+  // Include _meta if this is a UI tool
+  if (uiToolMeta[name]) {
+    response._meta = uiToolMeta[name];
+  }
+
+  return response;
 }
 
 function handleInitialize(): {
